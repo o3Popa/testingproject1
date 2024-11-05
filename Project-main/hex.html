@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Meta Tags and Title -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buyer and Seller Populator with Price Simulation</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Main CSS -->
+    <link href="assets/css/styles.css" rel="stylesheet" type="text/css">
+
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Wrap simulation content in a div with class "simulation" -->
+    <div class="simulation">
+        <div class="container">
+            <!-- Left Column for Buyers -->
+            <div class="column">
+                <h2>Buyers</h2>
+                <div class="slider-container">
+                    <input type="range" id="buyerSlider" min="1" max="30" value="1" oninput="updateBuyerSliderValue()">
+                    <span id="buyerValue">1</span>
+                </div>
+                <button onclick="addBuyers()">Add Buyers</button>
+                <button onclick="deleteBuyers()">Delete Buyers</button>
+                <div class="counter" id="buyerCount">Buyers Count: 0</div>
+                <canvas id="buyerCanvas" width="400" height="400"></canvas>
+            </div>
+
+            <!-- Right Column for Sellers -->
+            <div class="column">
+                <h2>Sellers</h2>
+                <div class="slider-container">
+                    <input type="range" id="sellerSlider" min="1" max="30" value="1" oninput="updateSellerSliderValue()">
+                    <span id="sellerValue">1</span>
+                </div>
+                <button onclick="addSellers()">Add Sellers</button>
+                <button onclick="deleteSellers()">Delete Sellers</button>
+                <div class="counter" id="sellerCount">Sellers Count: 0</div>
+                <canvas id="sellerCanvas" width="400" height="400"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="chart-container">
+            <h2>Price Simulation Chart</h2>
+            <div>
+                <span>Current Price: $<span id="currentPrice">10.00</span></span>
+            </div>
+            <canvas id="priceChart"></canvas>
+            <button class="reset-button" onclick="resetChart()">Reset Chart</button>
+        </div>
+    </div>
+
+    <!-- JavaScript Section -->
+    <script>
+        // Load the buyer and seller images
+        var buyerImage = new Image();
+        buyerImage.src = "play copy/img/man_cook.svg"; // Adjust the path accordingly
+
+        var sellerImage = new Image();
+        sellerImage.src = "play copy/img/man_farmer.svg"; // Adjust the path accordingly
+
+        // Store buyers and sellers to be drawn
+        var buyers = [];
+        var sellers = [];
+
+        // Variables for price simulation
+        var totalBuyers = 0;
+        var totalSellers = 0;
+        var priceData = [];
+        var chartLabels = [];
+        var priceChartInstance;
+        var basePrice = 10; // Initial base price for the good
+
+        // Function to update the buyer value when the slider moves
+        function updateBuyerSliderValue() {
+            var sliderValue = document.getElementById('buyerSlider').value;
+            document.getElementById('buyerValue').textContent = sliderValue;
+        }
+
+        // Function to update the seller value when the slider moves
+        function updateSellerSliderValue() {
+            var sliderValue = document.getElementById('sellerSlider').value;
+            document.getElementById('sellerValue').textContent = sliderValue;
+        }
+
+        // Function to add buyers based on the "Add Buyers" button
+        function addBuyers() {
+            var count = parseInt(document.getElementById('buyerSlider').value);
+            totalBuyers += count;
+            updateBuyerCount();
+            drawBuyers(count);
+            updatePrice();
+        }
+
+        // Function to add sellers based on the "Add Sellers" button
+        function addSellers() {
+            var count = parseInt(document.getElementById('sellerSlider').value);
+            totalSellers += count;
+            updateSellerCount();
+            drawSellers(count);
+            updatePrice();
+        }
+
+        // Function to delete buyers
+        function deleteBuyers() {
+            var count = parseInt(document.getElementById('buyerSlider').value);
+            if (totalBuyers >= count) {
+                totalBuyers -= count;
+            } else {
+                count = totalBuyers;
+                totalBuyers = 0;
+            }
+            updateBuyerCount();
+            buyers.splice(-count, count); // Remove buyers from array
+            drawBuyers(0); // Redraw buyers
+            updatePrice();
+        }
+
+        // Function to delete sellers
+        function deleteSellers() {
+            var count = parseInt(document.getElementById('sellerSlider').value);
+            if (totalSellers >= count) {
+                totalSellers -= count;
+            } else {
+                count = totalSellers;
+                totalSellers = 0;
+            }
+            updateSellerCount();
+            sellers.splice(-count, count); // Remove sellers from array
+            drawSellers(0); // Redraw sellers
+            updatePrice();
+        }
+
+        // Function to reset the chart data and sliders
+        function resetChart() {
+            chartLabels.length = 0; // Clear chart labels
+            priceData.length = 0; // Clear price data
+            priceChartInstance.update(); // Update the chart
+            document.getElementById('currentPrice').textContent = basePrice.toFixed(2); // Reset price display
+
+            // Reset the slider values to their minimum (1)
+            document.getElementById('buyerSlider').value = 1;
+            document.getElementById('sellerSlider').value = 1;
+
+            // Update the slider display values
+            document.getElementById('buyerValue').textContent = '1';
+            document.getElementById('sellerValue').textContent = '1';
+
+            // Reset buyer and seller counts
+            totalBuyers = 0;
+            totalSellers = 0;
+            updateBuyerCount();
+            updateSellerCount();
+
+            // Clear buyers and sellers from canvas
+            buyers = [];
+            sellers = [];
+            drawBuyers(0);
+            drawSellers(0);
+        }
+
+        // Function to draw all buyers
+        function drawBuyers(count) {
+            var canvas = document.getElementById("buyerCanvas");
+            var ctx = canvas.getContext("2d");
+
+            for (var i = 0; i < count; i++) {
+                var x = Math.random() * (canvas.width - 60) + 30;
+                var y = Math.random() * (canvas.height - 60) + 30;
+                buyers.push({ x: x, y: y });
+            }
+
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Ensure buyerImage is loaded before drawing
+            if (!buyerImage.complete) {
+                buyerImage.onload = function() {
+                    drawBuyers(0); // Redraw buyers
+                };
+                return;
+            }
+
+            // Draw each buyer in the array
+            buyers.forEach(function(buyer) {
+                ctx.save();
+                ctx.translate(buyer.x, buyer.y);
+                ctx.drawImage(buyerImage, -30, -30, 60, 60);
+                ctx.restore();
+            });
+        }
+
+        // Function to draw all sellers
+        function drawSellers(count) {
+            var canvas = document.getElementById("sellerCanvas");
+            var ctx = canvas.getContext("2d");
+
+            for (var i = 0; i < count; i++) {
+                var x = Math.random() * (canvas.width - 60) + 30;
+                var y = Math.random() * (canvas.height - 60) + 30;
+                sellers.push({ x: x, y: y });
+            }
+
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Ensure sellerImage is loaded before drawing
+            if (!sellerImage.complete) {
+                sellerImage.onload = function() {
+                    drawSellers(0); // Redraw sellers
+                };
+                return;
+            }
+
+            // Draw each seller in the array
+            sellers.forEach(function(seller) {
+                ctx.save();
+                ctx.translate(seller.x, seller.y);
+                ctx.drawImage(sellerImage, -30, -30, 60, 60);
+                ctx.restore();
+            });
+        }
+
+        // Function to update the displayed buyer count
+        function updateBuyerCount() {
+            document.getElementById("buyerCount").innerText = "Buyers Count: " + totalBuyers;
+        }
+
+        // Function to update the displayed seller count
+        function updateSellerCount() {
+            document.getElementById("sellerCount").innerText = "Sellers Count: " + totalSellers;
+        }
+
+        // Function to calculate price based on supply and demand
+        function calculatePrice() {
+            var equilibriumPrice = basePrice;  // Use base price as equilibrium
+            var buyerToSellerRatio = totalBuyers / totalSellers;
+
+            // Avoid dividing by zero (no sellers or buyers)
+            if (totalSellers === 0 || totalBuyers === 0) {
+                return equilibriumPrice;  // If no sellers or buyers, keep price at base price
+            }
+
+            // When buyers == sellers, price stays at equilibrium
+            if (totalBuyers === totalSellers) {
+                return equilibriumPrice;
+            }
+
+            // If buyers > sellers, price increases proportionally
+            if (totalBuyers > totalSellers) {
+                var priceIncrease = (buyerToSellerRatio - 1) * 2;  // Adjust multiplier as needed
+                return equilibriumPrice + priceIncrease;
+            }
+
+            // If sellers > buyers, price decreases proportionally
+            if (totalSellers > totalBuyers) {
+                var priceDecrease = (1 - buyerToSellerRatio) * 2;  // Adjust multiplier as needed
+                return equilibriumPrice - priceDecrease;
+            }
+
+            return equilibriumPrice;  // Default case
+        }
+
+        // Function to update price and the price chart
+        function updatePrice() {
+            var newPrice = calculatePrice();
+            document.getElementById('currentPrice').textContent = newPrice.toFixed(2);
+
+            var currentTime = new Date().toLocaleTimeString();
+            chartLabels.push(currentTime);
+            priceData.push(newPrice);
+
+            // Limit data to the last 20 points
+            if (chartLabels.length > 20) {
+                chartLabels.shift();
+                priceData.shift();
+            }
+
+            priceChartInstance.update();
+        }
+
+        // Initialize price chart using Chart.js
+        function initializePriceChart() {
+            var ctx = document.getElementById('priceChart').getContext('2d');
+            priceChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Price',
+                        data: priceData,
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeInOutQuad',
+                        loop: false
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Price'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#333',
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize the price chart on page load
+        window.onload = function() {
+            initializePriceChart();
+            updateBuyerCount();
+            updateSellerCount();
+        };
+    </script>
+</body>
+</html>
